@@ -6,7 +6,7 @@ pygame.init()
 DISPLAY_WIDTH = 900
 DISPLAY_HEIGHT = 700
 WATER_START = 80
-BTM_HEIGHT = 60
+BTM_HEIGHT = 80
 HOOK_HEIGHT = 40
 HOOK_WIDTH = 20
 OCTOPUS_SIZE = 60
@@ -21,6 +21,7 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 grey = (71, 71, 71)
 yellow = (255, 255, 89)
+small_font = pygame.font.SysFont('Calibri', 24)
 
 game_display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption('Octopus Mania')
@@ -89,13 +90,13 @@ class Octopus:
     def agitated_move(self, hook_x):
         if hook_x > self.pos[0]:
             self.direction = -1
-            self.reg_move(self.speed * 1.5)
+            self.reg_move(self.speed + 1)
         elif hook_x < self.pos[0]:
             self.direction = 1
-            self.reg_move(self.speed * 1.5)
+            self.reg_move(self.speed + 1)
         elif self.pos[0] == 0:
             self.direction = 1
-            self.reg_move(self.speed * 1.5)
+            self.reg_move(self.speed + 1)
 
     def fall(self):
         self.pos[1] += self.speed/2
@@ -110,6 +111,7 @@ def draw_hook(hook_pos):
 
 def game_loop():
     game_exit = False
+    score = 0
     hook_pos = [40, 40]
     up_movement = Movement()
     down_movement = Movement()
@@ -117,9 +119,10 @@ def game_loop():
     left_movement = Movement()
     octopus = [Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], red, 4, 1), Octopus([DISPLAY_WIDTH -
            OCTOPUS_SIZE, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], yellow, 4, -1)] #two octopus
-    caught_octopus = [False, False]
     octopus_fall = [False, False]
-    current_catch = -1
+    current_catch = -1 #-1 means nothing caught, otherwise will be index of octopus caught
+    escape_time = 15
+    escape_timer = 0
 
     while not game_exit:
 
@@ -128,22 +131,43 @@ def game_loop():
         right_movement.check()
         left_movement.check()
 
-        #check if the hook caught an octopus
+        #work the escape timer
+        if current_catch != -1:
+            escape_timer += 1
+
+            if escape_timer != 0 and escape_timer % 30 == 0:
+                escape_time -= 1
+
+            if escape_time == 0:
+                octopus_fall[current_catch] = True
+                escape_time = 15
+                escape_timer = 0
+                current_catch = -1
+
+            if octopus[current_catch].pos[1] == 0:
+                score += 100
+                pygame.time.wait(1000)
+                octopus.append(Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], octopus[current_catch].color, 4,
+                                       1))
+                del octopus[current_catch]
+                escape_time = 15
+                escape_timer = 0
+                current_catch = -1
+
         for i in range(0, len(octopus)):
             if octopus_fall[i]:
                 if octopus[i].pos[1] < DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE:
                     octopus[i].fall()
                 else:
                     octopus_fall[i] = False
-            elif not caught_octopus[i] and current_catch == -1:
+            elif current_catch == -1:
                 if hook_pos[0] in range(int(octopus[i].pos[0]), int(octopus[i].pos[0] + OCTOPUS_SIZE - HOOK_WIDTH)):
                     if hook_pos[1] in range(int(octopus[i].pos[1] - HOOK_HEIGHT / 2), int(octopus[i].pos[1] +
                                             OCTOPUS_SIZE)):
                         current_catch = i
-                        caught_octopus[i] = True
 
         for i in range(0, len(octopus)):
-            if not caught_octopus[i]:
+            if not octopus_fall[i] and current_catch != i:
                 if hook_pos[1] <= DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE * 3 or current_catch != -1:
                     octopus[i].reg_move(octopus[i].speed)
                 else:
@@ -168,8 +192,9 @@ def game_loop():
                     left_movement.acceleration = 1
                     left_movement.timer = 0
                 elif event.key == pygame.K_SPACE and current_catch != -1: #drop current caught octopus
-                    caught_octopus[current_catch] = False
                     octopus_fall[current_catch] = True
+                    escape_time = 15
+                    escape_timer = 0
                     current_catch = -1
 
             elif event.type == pygame.KEYUP:
@@ -226,6 +251,13 @@ def game_loop():
 
         for i in range(len(octopus) - 1, -1, -1):
             octopus[i].draw()
+
+        score_text = small_font.render('Score: ' + str(score), True, white)
+        game_display.blit(score_text, [DISPLAY_WIDTH/2 - score_text.get_rect().width/2, DISPLAY_HEIGHT - BTM_HEIGHT + 10])
+        if current_catch != -1:
+            escape_text = small_font.render('Octopus will escape in ' + str(escape_time) + ' seconds...', True, white)
+            game_display.blit(escape_text, [DISPLAY_WIDTH/2 - escape_text.get_rect().width/2, DISPLAY_HEIGHT -
+                              escape_text.get_rect().height - 5])
         pygame.display.update()
         clock.tick(FPS)
 
