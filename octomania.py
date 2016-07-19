@@ -12,6 +12,7 @@ BTM_HEIGHT = 80
 HOOK_HEIGHT = 40
 HOOK_WIDTH = 20
 OCTOPUS_SIZE = 60
+LIFE_SIZE = 20
 FPS = 30
 MAX_SPEED = 6
 ESCAPE_TIME = 10
@@ -132,7 +133,6 @@ class Shark:
             self.pos[0] = DISPLAY_WIDTH
 
         self.pos[1] = random.randint(WATER_START, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE - self.size[1])
-        print(self.speed, self.pos[0], self.pos[1], self.init_side)
 
     def draw(self):
         pygame.draw.rect(game_display, grey, [self.pos[0], self.pos[1], self.size[0], self.size[1]])
@@ -153,11 +153,44 @@ class Shark:
 
 
 def draw_hook(hook_pos):
-    pygame.draw.rect(game_display, black, [hook_pos[0], hook_pos[1], HOOK_WIDTH, HOOK_HEIGHT])
+    pygame.draw.rect(game_display, red, [hook_pos[0], hook_pos[1], HOOK_WIDTH, HOOK_HEIGHT])
     for i in range(0, int(hook_pos[1])):
         pygame.draw.rect(game_display, black, [hook_pos[0], i, HOOK_WIDTH, 2])
         i += 2
 
+
+def check_boundaries(pos, width, height, x_change, y_change):
+    if pos[0] + x_change > DISPLAY_WIDTH - width:
+        x_change = DISPLAY_WIDTH - width - pos[0]  # snap to boundary
+    elif pos[0] + x_change < 0:
+        x_change = -pos[0]
+
+    if pos[1] + y_change > DISPLAY_HEIGHT - BTM_HEIGHT - height:
+        y_change = DISPLAY_HEIGHT - BTM_HEIGHT - height - pos[1]
+    elif pos[1] + y_change < 0:
+        y_change = -pos[1]
+
+    return x_change, y_change
+
+
+def check_collision(sharks, pos, width, height, x_change, y_change):
+    lose_life = False
+    for shark in sharks:
+        if pos[0] + x_change in range(int(shark.pos[0] - width), int(shark.pos[0] + shark.size[0])):
+            if pos[1] + y_change in range(int(shark.pos[1] - height), int(shark.pos[1] + shark.size[1])):
+                lose_life = True
+                x_change = 0
+                y_change = 0
+                if pos[0] + width < shark.pos[0]:
+                    x_change = shark.pos[0] - width - pos[0]
+                elif pos[0] > shark.pos[0] + shark.size[0]:
+                    x_change = shark.pos[0] + shark.size[0] - pos[0]
+                elif pos[1] + height < shark.pos[1]:
+                    y_change = shark.pos[1] - height - pos[1]
+                elif pos[1] > shark.pos[1] + shark.size[1]:
+                    y_change = shark.pos[1] + shark.size[1] - pos[1]
+
+    return lose_life, x_change, y_change
 
 def game_loop():
     game_exit = False
@@ -175,6 +208,8 @@ def game_loop():
     escape_timer = 0
     sharks = [Shark(), Shark()]
     shark_timer = 0
+    lives = 3
+    lose_life = False
 
     while not game_exit:
 
@@ -183,11 +218,31 @@ def game_loop():
         right_movement.check()
         left_movement.check()
 
+        if lose_life:
+            pygame.time.wait(500)
+            lives -= 1
+            hook_pos = [0, 0]
+
+            if current_catch != -1:
+                octopus_fall[current_catch] = True
+                escape_time = ESCAPE_TIME
+                escape_timer = 0
+                current_catch = -1
+
+            if lives == 0:
+                game_exit = True
+                break
+
+
+            lose_life = False
+
         shark_timer += 1
 
+        #add new shark every 2 s
         if shark_timer % 60 == 0:
             sharks.append(Shark())
 
+        #move and delete sharks if necessary
         index = 0
         while index in range(0, len(sharks)):
             sharks[index].move()
@@ -213,7 +268,7 @@ def game_loop():
 
             if octopus[current_catch].pos[1] == 0:
                 score += 100
-                pygame.time.wait(1000)
+                pygame.time.wait(500)
                 octopus.append(Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], octopus[current_catch].color, 4,
                                        1))
                 del octopus[current_catch]
@@ -279,27 +334,17 @@ def game_loop():
         y_change = down_movement.speed - up_movement.speed
 
         if current_catch == -1:
-            #boundaries based on hook position
-            if hook_pos[0] + x_change > DISPLAY_WIDTH - HOOK_WIDTH:
-                x_change = DISPLAY_WIDTH - HOOK_WIDTH - hook_pos[0] #snap to boundary
-            elif hook_pos[0] + x_change < 0:
-                x_change = -hook_pos[0]
-
-            if hook_pos[1] + y_change > DISPLAY_HEIGHT - BTM_HEIGHT - HOOK_HEIGHT:
-                y_change = DISPLAY_HEIGHT - BTM_HEIGHT - HOOK_HEIGHT - hook_pos[1]
-            elif hook_pos[1] + y_change < 0:
-                y_change = -hook_pos[1]
+            #boundaries and collision based on hook position
+            x_change, y_change = check_boundaries(hook_pos, HOOK_WIDTH, HOOK_HEIGHT, x_change, y_change)
+            lose_life, x_change, y_change = check_collision(sharks, hook_pos, HOOK_WIDTH, HOOK_HEIGHT, x_change,
+                                                            y_change)
 
         else:
-            #boundaries based on position of caught octopus (so it doesn't go off the screen)
-            if octopus[current_catch].pos[0] + x_change > DISPLAY_WIDTH - OCTOPUS_SIZE:
-                x_change = DISPLAY_WIDTH - OCTOPUS_SIZE - octopus[current_catch].pos[0]
-            elif octopus[current_catch].pos[0] + x_change < 0:
-                x_change = -octopus[current_catch].pos[0]
-            if octopus[current_catch].pos[1] + y_change > DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE:
-                y_change = DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE - octopus[current_catch].pos[1]
-            elif octopus[current_catch].pos[1] + y_change < 0:
-                y_change = -octopus[current_catch].pos[1]
+            #boundaries and collisions based on position of caught octopus
+            x_change, y_change = check_boundaries(octopus[current_catch].pos, OCTOPUS_SIZE, OCTOPUS_SIZE, x_change,
+                                                  y_change)
+            lose_life, x_change, y_change = check_collision(sharks, octopus[current_catch].pos, OCTOPUS_SIZE,
+                                                            OCTOPUS_SIZE, x_change, y_change)
 
         hook_pos[0] += x_change
         hook_pos[1] += y_change
@@ -314,6 +359,9 @@ def game_loop():
                                                     BTM_HEIGHT])
         pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
         pygame.draw.rect(game_display, grey, [0, DISPLAY_HEIGHT - BTM_HEIGHT, DISPLAY_WIDTH, BTM_HEIGHT])
+
+        for i in range(1, lives + 1):
+            pygame.draw.ellipse(game_display, red, [DISPLAY_WIDTH - LIFE_SIZE * i * 1.5, 5, LIFE_SIZE, LIFE_SIZE])
 
         for i in range(0, len(sharks)):
             sharks[i].draw()
