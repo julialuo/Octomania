@@ -1,5 +1,7 @@
 import pygame
+import random
 
+#with 1 shark everything works, with > 1 somehow one deletes itself as soon as the other appears
 pygame.init()
 
 #constants
@@ -102,6 +104,52 @@ class Octopus:
         self.pos[1] += self.speed/2
 
 
+class Shark:
+    speed = 0
+    size = [0, 0]
+    init_side = 1 #1 is from the right, -1 is from the left
+    pos = [0, 0]
+
+    def __init__(self):
+        self.speed = random.randint(1, 4)
+
+        random_size = random.randint(1, 3)
+        if random_size == 1:
+            self.size = [60, 40]
+        elif random_size == 2:
+            self.size = [90, 60]
+        else:
+            self.size = [120, 80]
+
+        random_x = random.randint(1, 2)
+        if random_x == 1:
+            self.init_side = -1
+            self.pos[0] = -self.size[0]
+        else:
+            self.init_side = 1
+            self.pos[0] = DISPLAY_WIDTH
+
+        self.pos[1] = random.randint(WATER_START, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE - self.size[1])
+        print(self.speed, self.pos[0], self.pos[1], self.init_side)
+
+    def draw(self):
+        pygame.draw.rect(game_display, grey, [self.pos[0], self.pos[1], self.size[0], self.size[1]])
+
+    def move(self):
+        if self.init_side == 1:
+            self.pos[0] -= self.speed
+        else:
+            self.pos[0] += self.speed
+
+    def off_screen(self):
+        if self.pos[0] < -self.size[0] and self.init_side == 1:
+            return True
+        elif self.pos[0] > DISPLAY_WIDTH and self.init_side == -1:
+            return True
+        else:
+            return False
+
+
 def draw_hook(hook_pos):
     pygame.draw.rect(game_display, black, [hook_pos[0], hook_pos[1], HOOK_WIDTH, HOOK_HEIGHT])
     for i in range(0, int(hook_pos[1])):
@@ -123,6 +171,8 @@ def game_loop():
     current_catch = -1 #-1 means nothing caught, otherwise will be index of octopus caught
     escape_time = 15
     escape_timer = 0
+    sharks = [Shark(), Shark()]
+    shark_timer = 0
 
     while not game_exit:
 
@@ -130,6 +180,20 @@ def game_loop():
         down_movement.check()
         right_movement.check()
         left_movement.check()
+
+        shark_timer += 1
+
+        print(sharks[0].speed, sharks[0].pos[0], sharks[0].pos[1], sharks[0].init_side)
+        print(sharks[1].speed, sharks[1].pos[0], sharks[1].pos[1], sharks[1].init_side)
+
+        #if shark_timer % 120 == 0:
+            #sharks.append(Shark())
+
+        for i in range(0, len(sharks)):
+            sharks[i].move()
+
+            if sharks[i].off_screen():
+                del sharks[i]
 
         #work the escape timer
         if current_catch != -1:
@@ -247,6 +311,11 @@ def game_loop():
                                                     BTM_HEIGHT])
         pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
         pygame.draw.rect(game_display, grey, [0, DISPLAY_HEIGHT - BTM_HEIGHT, DISPLAY_WIDTH, BTM_HEIGHT])
+
+        for i in range(0, len(sharks)):
+            print('draw shark ' + str(i) + ', pos: ', sharks[i].pos)
+            sharks[i].draw()
+
         draw_hook(hook_pos)
 
         for i in range(len(octopus) - 1, -1, -1):
