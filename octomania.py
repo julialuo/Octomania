@@ -14,6 +14,7 @@ HOOK_WIDTH = 20
 OCTOPUS_SIZE = 60
 FPS = 30
 MAX_SPEED = 6
+ESCAPE_TIME = 10
 
 clock = pygame.time.Clock()
 
@@ -60,10 +61,10 @@ class Movement:
 
 
 class Octopus:
-    pos = [0, 0]
-    color = [0, 0, 0]
+    pos = 0
+    color = 0
     speed = 0
-    direction = 1 #1 is right, -1 is left
+    direction = 0 #1 is right, -1 is left
 
     def __init__(self, pos_input, color_input, speed_input, direction_input):
         self.pos = pos_input
@@ -106,9 +107,9 @@ class Octopus:
 
 class Shark:
     speed = 0
-    size = [0, 0]
-    init_side = 1 #1 is from the right, -1 is from the left
-    pos = [0, 0]
+    size = 0
+    init_side = 0 #1 is from the right, -1 is from the left
+    pos = 0
 
     def __init__(self):
         self.speed = random.randint(1, 4)
@@ -121,6 +122,7 @@ class Shark:
         else:
             self.size = [120, 80]
 
+        self.pos = [0, 0]
         random_x = random.randint(1, 2)
         if random_x == 1:
             self.init_side = -1
@@ -169,7 +171,7 @@ def game_loop():
            OCTOPUS_SIZE, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], yellow, 4, -1)] #two octopus
     octopus_fall = [False, False]
     current_catch = -1 #-1 means nothing caught, otherwise will be index of octopus caught
-    escape_time = 15
+    escape_time = ESCAPE_TIME
     escape_timer = 0
     sharks = [Shark(), Shark()]
     shark_timer = 0
@@ -183,17 +185,18 @@ def game_loop():
 
         shark_timer += 1
 
-        print(sharks[0].speed, sharks[0].pos[0], sharks[0].pos[1], sharks[0].init_side)
-        print(sharks[1].speed, sharks[1].pos[0], sharks[1].pos[1], sharks[1].init_side)
+        if shark_timer % 60 == 0:
+            sharks.append(Shark())
 
-        #if shark_timer % 120 == 0:
-            #sharks.append(Shark())
+        index = 0
+        while index in range(0, len(sharks)):
+            sharks[index].move()
 
-        for i in range(0, len(sharks)):
-            sharks[i].move()
+            if sharks[index].off_screen():
+                del sharks[index]
+                index -= 1
+            index += 1
 
-            if sharks[i].off_screen():
-                del sharks[i]
 
         #work the escape timer
         if current_catch != -1:
@@ -204,7 +207,7 @@ def game_loop():
 
             if escape_time == 0:
                 octopus_fall[current_catch] = True
-                escape_time = 15
+                escape_time = ESCAPE_TIME
                 escape_timer = 0
                 current_catch = -1
 
@@ -214,7 +217,7 @@ def game_loop():
                 octopus.append(Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], octopus[current_catch].color, 4,
                                        1))
                 del octopus[current_catch]
-                escape_time = 15
+                escape_time = ESCAPE_TIME
                 escape_timer = 0
                 current_catch = -1
 
@@ -257,7 +260,7 @@ def game_loop():
                     left_movement.timer = 0
                 elif event.key == pygame.K_SPACE and current_catch != -1: #drop current caught octopus
                     octopus_fall[current_catch] = True
-                    escape_time = 15
+                    escape_time = ESCAPE_TIME
                     escape_timer = 0
                     current_catch = -1
 
@@ -313,7 +316,6 @@ def game_loop():
         pygame.draw.rect(game_display, grey, [0, DISPLAY_HEIGHT - BTM_HEIGHT, DISPLAY_WIDTH, BTM_HEIGHT])
 
         for i in range(0, len(sharks)):
-            print('draw shark ' + str(i) + ', pos: ', sharks[i].pos)
             sharks[i].draw()
 
         draw_hook(hook_pos)
