@@ -20,15 +20,19 @@ ESCAPE_TIME = 10
 clock = pygame.time.Clock()
 
 red = (255, 0, 0)
-water_blue = (68, 255, 255)
+light_blue = (68, 255, 255)
+dark_blue = (68, 68, 255)
 white = (255, 255, 255)
 black = (0, 0, 0)
 grey = (71, 71, 71)
 yellow = (255, 255, 89)
+
+large_font = pygame.font.SysFont('Calibri', 80)
+med_font = pygame.font.SysFont('Calibri', 40)
 small_font = pygame.font.SysFont('Calibri', 24)
 
 game_display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
-pygame.display.set_caption('Octopus Mania')
+pygame.display.set_caption('Octomania')
 
 
 #easing movement
@@ -152,6 +156,21 @@ class Shark:
             return False
 
 
+def display_text(text, size, colour, position, y_displace=0):
+    if size == 'small':
+        screen_text = small_font.render(text, True, colour)
+    elif size == 'medium':
+        screen_text = med_font.render(text, True, colour)
+    elif size == 'large':
+        screen_text = large_font.render(text, True, colour)
+    if position == 'center':
+        game_display.blit(screen_text, [DISPLAY_WIDTH/2 - screen_text.get_rect().width/2, DISPLAY_HEIGHT/2 -
+                                        screen_text.get_rect().height/2 + y_displace])
+    elif position == 'bottom center':
+        game_display.blit(screen_text, [DISPLAY_WIDTH / 2 - screen_text.get_rect().width / 2, DISPLAY_HEIGHT -
+                                        screen_text.get_rect().height - y_displace])
+
+
 def draw_hook(hook_pos):
     pygame.draw.rect(game_display, red, [hook_pos[0], hook_pos[1], HOOK_WIDTH, HOOK_HEIGHT])
     for i in range(0, int(hook_pos[1])):
@@ -192,8 +211,81 @@ def check_collision(sharks, pos, width, height, x_change, y_change):
 
     return lose_life, x_change, y_change
 
+
+def blue_transition(mode): #0 is darken, 1 is lighten
+    if mode == 0:
+        for green in range(light_blue[1], dark_blue[1] - 1, -1):
+            pygame.draw.rect(game_display, (68, green, 255), [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT -
+                                                              WATER_START])
+            pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
+            pygame.display.update()
+
+    else:
+        for green in range(dark_blue[1], light_blue[1] + 1):
+            pygame.draw.rect(game_display, (68, green, 255), [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT -
+                                                              WATER_START])
+            pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
+            pygame.display.update()
+
+
+def start_screen():
+    on_screen = True
+
+    while on_screen:
+
+        pygame.draw.rect(game_display, light_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START])
+        pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
+        display_text('Octomania', 'large', white, 'center', -40)
+        display_text('[i] Instructions', 'small', white, 'center', 10)
+        display_text('[s] Start Game', 'small', white, 'center', 40)
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                on_screen = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    on_screen = False
+                if event.key == pygame.K_s:
+                    on_screen = False
+                    game_loop()
+                if event.key == pygame.K_i:
+                    on_screen = False
+                    instruct_screen()
+
+
+def instruct_screen():
+    on_screen = True
+
+    while on_screen:
+
+        pygame.draw.rect(game_display, light_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START])
+        pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
+        display_text('Instructions', 'large', white, 'center', -40)
+        display_text('Use [arrow keys] to move your hook and catch the octopus.', 'small', white, 'center', 10)
+        display_text('A caught octopus will escape in 10 s, or you can use', 'small', white, 'center', 40)
+        display_text('[space] to drop it. Beware of sharks: if they touch your', 'small', white, 'center', 70)
+        display_text('hook, you will lose a life. The goal is to catch as many', 'small', white, 'center', 100)
+        display_text('octopus as you can without losing all 3 lives. Good luck!', 'small', white, 'center', 130)
+        display_text('[s] Start Game', 'small', white, 'center', 160)
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                on_screen = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    on_screen = False
+                if event.key == pygame.K_s:
+                    on_screen = False
+                    game_loop()
+
+
 def game_loop():
     game_exit = False
+    game_over = False
     score = 0
     hook_pos = [40, 40]
     up_movement = Movement()
@@ -230,9 +322,8 @@ def game_loop():
                 current_catch = -1
 
             if lives == 0:
-                game_exit = True
-                break
-
+                game_over = True
+                blue_transition(0)
 
             lose_life = False
 
@@ -355,7 +446,7 @@ def game_loop():
             octopus[current_catch].pos[1] += y_change
 
         #draw all objects to display
-        pygame.draw.rect(game_display, water_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START -
+        pygame.draw.rect(game_display, light_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START -
                                                     BTM_HEIGHT])
         pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
         pygame.draw.rect(game_display, grey, [0, DISPLAY_HEIGHT - BTM_HEIGHT, DISPLAY_WIDTH, BTM_HEIGHT])
@@ -371,16 +462,38 @@ def game_loop():
         for i in range(len(octopus) - 1, -1, -1):
             octopus[i].draw()
 
-        score_text = small_font.render('Score: ' + str(score), True, white)
-        game_display.blit(score_text, [DISPLAY_WIDTH/2 - score_text.get_rect().width/2, DISPLAY_HEIGHT - BTM_HEIGHT + 10])
+        display_text('Score: ' + str(score), 'small', white, 'bottom center', 40)
+
         if current_catch != -1:
-            escape_text = small_font.render('Octopus will escape in ' + str(escape_time) + ' seconds...', True, white)
-            game_display.blit(escape_text, [DISPLAY_WIDTH/2 - escape_text.get_rect().width/2, DISPLAY_HEIGHT -
-                              escape_text.get_rect().height - 5])
+            display_text('Octopus will escape in ' + str(escape_time) + ' seconds...', 'small', white, 'bottom center',
+                         5)
+
         pygame.display.update()
         clock.tick(FPS)
 
-    pygame.quit()
-    quit()
+        while game_over:
 
-game_loop()
+            pygame.draw.rect(game_display, dark_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START])
+            pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
+            display_text('Game Over', 'large', white, 'center', -40)
+            display_text('Score: ' + str(score), 'small', white, 'center', 10)
+            display_text('[b] Back to Main Menu', 'small', white, 'center', 40)
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    game_over = False
+                    game_exit = True
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        game_over = False
+                        game_exit = True
+                    if event.key == pygame.K_b:
+                        blue_transition(1)
+                        game_over = False
+                        start_screen()
+                        game_exit = True
+
+start_screen()
+pygame.quit()
+quit()
