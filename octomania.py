@@ -31,6 +31,14 @@ large_font = pygame.font.SysFont('Calibri', 80)
 med_font = pygame.font.SysFont('Calibri', 40)
 small_font = pygame.font.SysFont('Calibri', 24)
 
+hook_img = pygame.image.load("hook2.png")
+hook_line_img = pygame.image.load("hook line2.png")
+red_octopus_img = pygame.image.load("red octopus.png")
+purple_octopus_img = pygame.image.load("purple octopus.png")
+shark1_img = pygame.image.load("shark1.png")
+shark2_img = pygame.image.load("shark2.png")
+shark3_img = pygame.image.load("shark3.png")
+
 game_display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption('Octomania')
 
@@ -67,18 +75,21 @@ class Movement:
 
 class Octopus:
     pos = 0
-    color = 0
+    image = 0
     speed = 0
     direction = 0 #1 is right, -1 is left
 
-    def __init__(self, pos_input, color_input, speed_input, direction_input):
+    def __init__(self, pos_input, image_input, speed_input, direction_input):
         self.pos = pos_input
-        self.color = color_input
+        self.image = image_input
         self.speed = speed_input
         self.direction = direction_input
 
     def draw(self):
-        pygame.draw.rect(game_display, self.color, [self.pos[0], self.pos[1], OCTOPUS_SIZE, OCTOPUS_SIZE])
+        if self.direction == -1:
+            game_display.blit(self.image, [self.pos[0], self.pos[1]])
+        else:
+            game_display.blit(pygame.transform.flip(self.image, True, False), [self.pos[0], self.pos[1]])
 
     def reg_move(self, current_speed):
         if self.direction == 1:
@@ -107,12 +118,13 @@ class Octopus:
             self.reg_move(self.speed + 1)
 
     def fall(self):
-        self.pos[1] += self.speed/2
+        self.pos[1] += (self.speed - 2)
 
 
 class Shark:
     speed = 0
     size = 0
+    image = 0
     init_side = 0 #1 is from the right, -1 is from the left
     pos = 0
 
@@ -121,11 +133,14 @@ class Shark:
 
         random_size = random.randint(1, 3)
         if random_size == 1:
-            self.size = [60, 40]
+            self.size = [90, 63]
+            self.image = shark1_img
         elif random_size == 2:
-            self.size = [90, 60]
+            self.size = [100, 38]
+            self.image = shark2_img
         else:
-            self.size = [120, 80]
+            self.size = [130, 53]
+            self.image = shark3_img
 
         self.pos = [0, 0]
         random_x = random.randint(1, 2)
@@ -139,7 +154,10 @@ class Shark:
         self.pos[1] = random.randint(WATER_START, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE - self.size[1])
 
     def draw(self):
-        pygame.draw.rect(game_display, grey, [self.pos[0], self.pos[1], self.size[0], self.size[1]])
+        if self.init_side == -1:
+            game_display.blit(self.image, [self.pos[0], self.pos[1]])
+        else:
+            game_display.blit(pygame.transform.flip(self.image, True, False), [self.pos[0], self.pos[1]])
 
     def move(self):
         if self.init_side == 1:
@@ -172,9 +190,10 @@ def display_text(text, size, colour, position, y_displace=0):
 
 
 def draw_hook(hook_pos):
-    pygame.draw.rect(game_display, red, [hook_pos[0], hook_pos[1], HOOK_WIDTH, HOOK_HEIGHT])
+    game_display.blit(hook_img, [hook_pos[0], hook_pos[1]])
     for i in range(0, int(hook_pos[1])):
-        pygame.draw.rect(game_display, black, [hook_pos[0], i, HOOK_WIDTH, 2])
+        game_display.blit(hook_line_img, [hook_pos[0], i])
+        #pygame.draw.rect(game_display, black, [hook_pos[0], i, HOOK_WIDTH, 2])
         i += 2
 
 
@@ -266,9 +285,10 @@ def instruct_screen():
         display_text('Use [arrow keys] to move your hook and catch the octopus.', 'small', white, 'center', 10)
         display_text('A caught octopus will escape in 10 s, or you can use', 'small', white, 'center', 40)
         display_text('[space] to drop it. Beware of sharks: if they touch your', 'small', white, 'center', 70)
-        display_text('hook, you will lose a life. The goal is to catch as many', 'small', white, 'center', 100)
-        display_text('octopus as you can without losing all 3 lives. Good luck!', 'small', white, 'center', 130)
-        display_text('[s] Start Game', 'small', white, 'center', 160)
+        display_text('hook, you will lose a life. The goal is to catch and bring', 'small', white, 'center', 100)
+        display_text('as many octopus as you can to the top of the screen', 'small', white, 'center', 130)
+        display_text('without losing all 3 lives. Good luck!', 'small', white, 'center', 160)
+        display_text('[s] Start Game', 'small', white, 'center', 190)
 
         pygame.display.update()
 
@@ -292,8 +312,8 @@ def game_loop():
     down_movement = Movement()
     right_movement = Movement()
     left_movement = Movement()
-    octopus = [Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], red, 4, 1), Octopus([DISPLAY_WIDTH -
-           OCTOPUS_SIZE, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], yellow, 4, -1)] #two octopus
+    octopus = [Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], red_octopus_img, 4, 1), Octopus([DISPLAY_WIDTH -
+           OCTOPUS_SIZE, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], purple_octopus_img, 3, -1)] #two octopus
     octopus_fall = [False, False]
     current_catch = -1 #-1 means nothing caught, otherwise will be index of octopus caught
     escape_time = ESCAPE_TIME
@@ -360,7 +380,7 @@ def game_loop():
             if octopus[current_catch].pos[1] == 0:
                 score += 100
                 pygame.time.wait(500)
-                octopus.append(Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], octopus[current_catch].color, 4,
+                octopus.append(Octopus([0, DISPLAY_HEIGHT - BTM_HEIGHT - OCTOPUS_SIZE], octopus[current_catch].image, 4,
                                        1))
                 del octopus[current_catch]
                 escape_time = ESCAPE_TIME
