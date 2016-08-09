@@ -1,13 +1,14 @@
 import pygame
 import random
 
-#with 1 shark everything works, with > 1 somehow one deletes itself as soon as the other appears
 pygame.init()
 
 #constants
 DISPLAY_WIDTH = 900
 DISPLAY_HEIGHT = 700
 WATER_START = 80
+WAVE_HEIGHT = 10
+WAVE_WIDTH = 40
 BTM_HEIGHT = 80
 HOOK_HEIGHT = 40
 HOOK_WIDTH = 20
@@ -38,6 +39,7 @@ purple_octopus_img = pygame.image.load("purple octopus.png")
 shark1_img = pygame.image.load("shark1.png")
 shark2_img = pygame.image.load("shark2.png")
 shark3_img = pygame.image.load("shark3.png")
+wave_img = pygame.image.load("wave.png")
 
 game_display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption('Octomania')
@@ -193,8 +195,14 @@ def draw_hook(hook_pos):
     game_display.blit(hook_img, [hook_pos[0], hook_pos[1]])
     for i in range(0, int(hook_pos[1])):
         game_display.blit(hook_line_img, [hook_pos[0], i])
-        #pygame.draw.rect(game_display, black, [hook_pos[0], i, HOOK_WIDTH, 2])
         i += 2
+
+
+def draw_water():
+    for i in range(0, DISPLAY_WIDTH, WAVE_WIDTH):
+        game_display.blit(wave_img, [i, WATER_START])
+    pygame.draw.rect(game_display, light_blue, [0, WATER_START + WAVE_HEIGHT, DISPLAY_WIDTH, DISPLAY_HEIGHT -
+                                                WATER_START - BTM_HEIGHT])
 
 
 def check_boundaries(pos, width, height, x_change, y_change):
@@ -466,8 +474,7 @@ def game_loop():
             octopus[current_catch].pos[1] += y_change
 
         #draw all objects to display
-        pygame.draw.rect(game_display, light_blue, [0, WATER_START, DISPLAY_WIDTH, DISPLAY_HEIGHT - WATER_START -
-                                                    BTM_HEIGHT])
+        draw_water()
         pygame.draw.rect(game_display, white, [0, 0, DISPLAY_WIDTH, WATER_START])
         pygame.draw.rect(game_display, grey, [0, DISPLAY_HEIGHT - BTM_HEIGHT, DISPLAY_WIDTH, BTM_HEIGHT])
 
