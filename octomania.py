@@ -47,9 +47,11 @@ pygame.display.set_caption('Octomania')
 
 #easing movement
 class Movement:
-    timer = 0
-    acceleration = 0 #1 means accelerate, -1 means decelerate, 0 means not moving
-    speed = 0
+
+    def __init__(self):
+        self.timer = 0
+        self.acceleration = 0 #1 means accelerate, -1 means decelerate, 0 means not moving
+        self.speed = 0
 
     def check(self):
 
@@ -76,10 +78,6 @@ class Movement:
 
 
 class Octopus:
-    pos = 0
-    image = 0
-    speed = 0
-    direction = 0 #1 is right, -1 is left
 
     def __init__(self, pos_input, image_input, speed_input, direction_input):
         self.pos = pos_input
@@ -124,11 +122,6 @@ class Octopus:
 
 
 class Shark:
-    speed = 0
-    size = 0
-    image = 0
-    init_side = 0 #1 is from the right, -1 is from the left
-    pos = 0
 
     def __init__(self):
         self.speed = random.randint(1, 4)
@@ -147,7 +140,7 @@ class Shark:
         self.pos = [0, 0]
         random_x = random.randint(1, 2)
         if random_x == 1:
-            self.init_side = -1
+            self.init_side = -1             #init_side 1 means from the right, init_side = -1 means from the left
             self.pos[0] = -self.size[0]
         else:
             self.init_side = 1
